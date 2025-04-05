@@ -17,6 +17,7 @@ df = get_data()
 # Conversão de mês
 meses = {i: f"{i:02d}" for i in range(1, 13)}
 df['mes_str'] = df['mes'].map(meses)
+df['data_faturamento'] = pd.to_datetime(df['data_faturamento'])
 
 # Header com logo, título e filtros
 with st.container():
@@ -31,9 +32,9 @@ with st.container():
 
     col1, col2 = st.columns(2)
     with col1:
-        data_inicio = st.date_input("Data Inicial", value=df['data_faturamento'].min())
+        data_inicio = st.date_input("Data Inicial", value=df['data_faturamento'].min().date())
     with col2:
-        data_fim = st.date_input("Data Final", value=df['data_faturamento'].max())
+        data_fim = st.date_input("Data Final", value=df['data_faturamento'].max().date())
 
 # Filtro por data
 df = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) &
@@ -54,12 +55,7 @@ with col1:
         margin=dict(t=20, b=20), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
         plot_bgcolor='white', paper_bgcolor='white',
         font=dict(color='#1A1F22'),
-    )
-    fig_mes.update_layout(
-        autosize=True,
-        margin=dict(l=10, r=10, t=30, b=10),
         height=350,
-        bargap=0.15,
         shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, x1=1, y0=0, y1=1,
                      line=dict(color="#5A7497", width=1))]
     )
