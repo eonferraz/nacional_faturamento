@@ -1,32 +1,26 @@
 import streamlit as st
 import pandas as pd
-import pyodbc
+from sqlalchemy import create_engine
+from urllib.parse import quote_plus
 from datetime import datetime
 import plotly.express as px
 
 st.set_page_config(page_title="Dashboard de Faturamento", layout="wide")
 
-# 🔐 Conexão com SQL Server (Azure)
-def conectar_sql_server():
-    conn = pyodbc.connect(
-        "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=benu.database.windows.net,1433;"
-        "DATABASE=benu;"
-        "UID=eduardo.ferraz;"
-        "PWD=Pam6i8Z9N<;}P?C5;6v7;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-    )
-    return conn
-
+# 🔐 Conexão com SQL Server no Azure via SQLAlchemy + pytds
 @st.cache_data(ttl=600)
 def carregar_dados():
-    conn = conectar_sql_server()
-    query = "SELECT * FROM nacional_faturamento"
-    df = pd.read_sql(query, conn)
-    conn.close()
+    usuario = "eduardo.ferraz"
+    senha = quote_plus("Pam6i8Z9N<;}P?C5;6v7")
+    servidor = "benu.database.windows.net"
+    banco = "benu"
 
-    # Conversão de datas
+    conn_str = f"mssql+pytds://{usuario}:{senha}@{servidor}:1433/{banco}"
+    engine = create_engine(conn_str)
+
+    df = pd.read_sql("SELECT * FROM nacional_faturamento", con=engine)
+
+    # Conversões de data
     for col in ["data_negociacao", "data_faturamento", "data_entrada"]:
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
@@ -34,6 +28,7 @@ def carregar_dados():
 
 # 🎯 Início do app
 st.title("📊 Dashboard de Faturamento - Nacional")
+
 df = carregar_dados()
 
 # 📅 Filtros de ano e mês
