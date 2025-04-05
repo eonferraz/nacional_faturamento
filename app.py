@@ -7,6 +7,22 @@ from datetime import datetime
 
 st.set_page_config(page_title="Faturamento Nacional", layout="wide")
 
+# Estilo da página - fundo grafite escuro
+st.markdown("""
+    <style>
+        body {
+            background-color: #1A1F22;
+            color: #FFFFFF;
+        }
+        .block-container {
+            background-color: #1A1F22;
+        }
+        label, h1, h2, h3, h4, h5, h6, div[data-testid="stMarkdownContainer"] {
+            color: #FFFFFF;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Formatação de moeda brasileira
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
@@ -19,7 +35,6 @@ df['mes_str'] = df['mes'].apply(lambda x: f"{x:02d}")
 df['data_faturamento'] = pd.to_datetime(df['data_faturamento'])
 
 # Header com logo, título e filtros
-st.markdown("""<div style='height:20px'></div>""", unsafe_allow_html=True)
 col_logo, col_title = st.columns([0.15, 0.85])
 with col_logo:
     st.image("nacional-escuro.svg", width=120)
@@ -28,20 +43,21 @@ with col_title:
 
 col_data1, col_data2 = st.columns(2)
 with col_data1:
-    data_inicio = st.date_input("Data Inicial", value=df['data_faturamento'].min().date())
+    data_inicio = st.date_input("Data Inicial", value=pd.to_datetime(df['data_faturamento'].min()).date())
 with col_data2:
-    data_fim = st.date_input("Data Final", value=df['data_faturamento'].max().date())
+    data_fim = st.date_input("Data Final", value=pd.to_datetime(df['data_faturamento'].max()).date())
 
-# Filtro por data
-df = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) &
-        (df['data_faturamento'] <= pd.to_datetime(data_fim))]
+# Filtro por data — corrigido para garantir tipo compatível
+data_inicio = pd.to_datetime(data_inicio)
+data_fim = pd.to_datetime(data_fim)
+df_filtrado = df[(df['data_faturamento'] >= data_inicio) & (df['data_faturamento'] <= data_fim)]
 
 # Segmento 1 - Faturamento mensal e por operação
 st.markdown("### Faturamento Mensal e por Operação")
 col1, col2 = st.columns([0.7, 0.3])
 
 with col1:
-    faturamento_mensal = df.groupby('mes_str')['receita'].sum().reset_index()
+    faturamento_mensal = df_filtrado.groupby('mes_str')['receita'].sum().reset_index()
     faturamento_mensal['receita_fmt'] = faturamento_mensal['receita'].apply(formatar_moeda)
     fig_mes = px.bar(faturamento_mensal, x='mes_str', y='receita', text='receita_fmt',
                      labels={'mes_str': 'Mês', 'receita': 'Receita'})
@@ -57,7 +73,7 @@ with col1:
     st.plotly_chart(fig_mes, use_container_width=True)
 
 with col2:
-    op = df.groupby('operacao')['receita'].sum().reset_index().sort_values(by='receita', ascending=True)
+    op = df_filtrado.groupby('operacao')['receita'].sum().reset_index().sort_values(by='receita', ascending=True)
     op['receita_fmt'] = op['receita'].apply(formatar_moeda)
     fig_op = px.bar(op, x='receita', y='operacao', orientation='h', text='receita_fmt',
                     labels={'operacao': 'Operação', 'receita': 'Receita'})
@@ -77,7 +93,7 @@ st.markdown("### Faturamento por Cliente")
 col3, _ = st.columns([0.5, 0.5])
 
 with col3:
-    top_clientes = df.groupby('parceiro')['receita'].sum().nlargest(10).reset_index()
+    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().nlargest(10).reset_index()
     top_clientes['receita_fmt'] = top_clientes['receita'].apply(formatar_moeda)
     fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt',
                      labels={'parceiro': 'Cliente', 'receita': 'Receita'})
@@ -92,7 +108,7 @@ with col3:
 
 # Segmento 3 - Tabela
 st.markdown("### Tabela de Vendas")
-df_tabela = df[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
+df_tabela = df_filtrado[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
 df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
 df_tabela.rename(columns={
     'data_faturamento': 'Data',
