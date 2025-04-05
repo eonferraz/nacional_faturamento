@@ -1,88 +1,92 @@
+# app.py
 import streamlit as st
 import pandas as pd
-from sqlalchemy.engine import URL
-from sqlalchemy import create_engine
-from datetime import datetime
 import plotly.express as px
-from urllib.parse import quote_plus
+from db_utils import get_data
+from datetime import datetime
 
-st.set_page_config(page_title="Dashboard de Faturamento", layout="wide")
+st.set_page_config(page_title="Faturamento Nacional", layout="wide")
 
-# 🔐 Conexão com SQL Server via SQLAlchemy + ODBC (local)
-@st.cache_data(ttl=600)
-def carregar_dados():
-    # Dados de conexão
-    username = "eduardo.ferraz"
-    password = quote_plus("Pam6i8Z9N<;}P?C5;6v7")
-    host = "benu.database.windows.net"
-    database = "benu"
+# Logo e header
+col1, col2 = st.columns([0.2, 0.8])
+with col1:
+    st.image("nacional-branco.svg", width=140)
+with col2:
+    st.markdown("""
+    <h1 style='color:#13253D; margin-top: 10px;'>FATURAMENTO</h1>
+    """, unsafe_allow_html=True)
 
-    connection_string = URL.create(
-        "mssql+pyodbc",
-        username=username,
-        password=password,
-        host=host,
-        port=1433,
-        database=database,
-        query={
-            "driver": "ODBC Driver 17 for SQL Server",
-            "Encrypt": "yes",
-            "TrustServerCertificate": "no"
-        }
-    )
+# Dados
+df = get_data()
 
-    engine = create_engine(connection_string)
-    df = pd.read_sql("SELECT * FROM nacional_faturamento", con=engine)
+# Conversão e ordenação
+meses = {
+    1: "01", 2: "02", 3: "03", 4: "04", 5: "05", 6: "06",
+    7: "07", 8: "08", 9: "09", 10: "10", 11: "11", 12: "12"
+}
+df['mes_str'] = df['mes'].map(meses)
 
-    # Conversões de data
-    for col in ["data_negociacao", "data_faturamento", "data_entrada"]:
-        df[col] = pd.to_datetime(df[col], errors="coerce")
-
-    return df
-
-# 🌟 Início do App
-st.title("📊 Dashboard de Faturamento - Nacional")
-df = carregar_dados()
-
-# 📅 Filtros de ano e mês
+# Segmento 1
+st.markdown("### Faturamento Mensal e por Operação")
 col1, col2 = st.columns(2)
-anos = sorted(df["ano"].dropna().unique(), reverse=True)
-meses = sorted(df["mes"].dropna().unique())
 
-ano_selecionado = col1.selectbox("Ano", anos, index=0)
-mes_selecionado = col2.selectbox("Mês", meses, index=0)
+# Gráfico de Faturamento Mensal
+with col1:
+    faturamento_mensal = df.groupby('mes_str')['receita'].sum().reset_index()
+    fig_mes = px.bar(faturamento_mensal, x='mes_str', y='receita',
+                    text_auto='.2s',
+                    labels={'mes_str': 'Mês', 'receita': 'Receita'},
+                    template='simple_white')
+    fig_mes.update_traces(marker_color='#13253D', textfont_size=14)
+    fig_mes.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None,
+                          margin=dict(t=20, b=20), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+    st.plotly_chart(fig_mes, use_container_width=True)
 
-df_filtrado = df[(df["ano"] == ano_selecionado) & (df["mes"] == mes_selecionado)]
+# Gráfico por Operação
+with col2:
+    op = df.groupby('operacao')['receita'].sum().reset_index().sort_values(by='receita', ascending=False)
+    fig_op = px.bar(op, x='operacao', y='receita',
+                    labels={'operacao': 'Operação', 'receita': 'Receita'},
+                    template='simple_white')
+    fig_op.update_traces(marker_color='#5A7497')
+    fig_op.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None,
+                         margin=dict(t=20, b=20), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+    st.plotly_chart(fig_op, use_container_width=True)
 
-# 🔹 Indicadores
-st.markdown(f"### 📅 Faturamento de {mes_selecionado:02d}/{ano_selecionado}")
-col3, col4, col5 = st.columns(3)
-col3.metric("Receita Total", f"R$ {df_filtrado['receita'].sum():,.2f}")
-col4.metric("Total de Projetos", df_filtrado["projeto"].nunique())
-col5.metric("Parceiros Únicos", df_filtrado["parceiro"].nunique())
+# Segmento 2
+st.markdown("### Faturamento por Cliente e Detalhes")
+col3, col4 = st.columns(2)
 
-# 📊 Gráfico por parceiro
-fig_parceiros = px.bar(
-    df_filtrado.groupby("parceiro")["receita"].sum().reset_index().sort_values("receita", ascending=False),
-    x="parceiro", y="receita", title="Receita por Parceiro", text_auto=".2s"
-)
-st.plotly_chart(fig_parceiros, use_container_width=True)
+# Top 10 Clientes
+with col3:
+    top_clientes = df.groupby('parceiro')['receita'].sum().nlargest(10).reset_index()
+    fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h',
+                    labels={'parceiro': 'Cliente', 'receita': 'Receita'},
+                    template='simple_white')
+    fig_cli.update_traces(marker_color='#13253D')
+    fig_cli.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None,
+                          margin=dict(t=20, b=20), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
+    st.plotly_chart(fig_cli, use_container_width=True)
 
-# 📄 Tabela detalhada
-st.subheader("📄 Detalhamento dos dados")
-st.dataframe(df_filtrado)
+# Segmento 3
+st.markdown("### Tabela de Vendas com Heatmap")
+df_tabela = df[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
+df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
+df_tabela.rename(columns={
+    'data_faturamento': 'Data',
+    'parceiro': 'Cliente',
+    'numero_nf': 'NF',
+    'receita': 'Receita'
+}, inplace=True)
 
-# 📅 Exportar para Excel
-def gerar_excel(df):
-    from io import BytesIO
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Faturamento")
-    return output.getvalue()
+st.dataframe(
+    df_tabela.style.background_gradient(subset=['Receita'], cmap='Reds'),
+    use_container_width=True,
+    hide_index=True
+)  
 
-st.download_button(
-    label="📅 Baixar Excel",
-    data=gerar_excel(df_filtrado),
-    file_name=f"faturamento_{ano_selecionado}_{mes_selecionado}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+# Rodapé
+st.markdown("""
+---
+<small style='color:#CECECE;'>Dashboard desenvolvido por Paulo Eduardo para Nacional Indústria Mecânica</small>
+""", unsafe_allow_html=True)
