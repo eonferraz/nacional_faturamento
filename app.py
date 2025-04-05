@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.express as px
 from db_utils import get_data
 from datetime import datetime
+import io
+import xlsxwriter
 
 st.set_page_config(page_title="Faturamento Nacional", layout="wide")
 
@@ -100,37 +102,60 @@ with col2:
     )
     st.plotly_chart(fig_op, use_container_width=True)
 
-# Segmento 2 - Clientes
-st.markdown("### Faturamento por Cliente")
-col3, _ = st.columns([0.5, 0.5])
+# Segmento 2 - Faturamento por Cliente e Tabela
+st.markdown("### Faturamento por Cliente e Tabela de Vendas")
+col3, col4 = st.columns(2)
 
 with col3:
-    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().nlargest(10).reset_index()
+    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().reset_index().sort_values(by='receita', ascending=False).head(10)
     top_clientes['receita_fmt'] = top_clientes['receita'].apply(formatar_moeda)
     fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt',
                      labels={'parceiro': 'Cliente', 'receita': 'Receita'})
     fig_cli.update_traces(marker_color='#13253D')
     fig_cli.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None,
                           margin=dict(t=10, b=10), xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
-                          height=350,
+                          height=400,
                           plot_bgcolor='white', paper_bgcolor='white',
                           shapes=[dict(type="rect", xref="paper", yref="paper", x0=0, x1=1, y0=0, y1=1,
                                        line=dict(color="#5A7497", width=1))])
     st.plotly_chart(fig_cli, use_container_width=True)
 
-# Segmento 3 - Tabela
-st.markdown("### Tabela de Vendas")
-df_tabela = df_filtrado[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
-df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
-df_tabela.rename(columns={
-    'data_faturamento': 'Data',
-    'parceiro': 'Cliente',
-    'numero_nf': 'NF',
-    'receita': 'Receita'
-}, inplace=True)
-df_tabela['Receita'] = df_tabela['Receita'].apply(formatar_moeda)
+with col4:
+    df_tabela = df_filtrado[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
+    df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
+    df_tabela.rename(columns={
+        'data_faturamento': 'Data',
+        'parceiro': 'Cliente',
+        'numero_nf': 'NF',
+        'receita': 'Receita'
+    }, inplace=True)
+    df_tabela_formatada = df_tabela.copy()
+    df_tabela_formatada['Receita'] = df_tabela_formatada['Receita'].apply(formatar_moeda)
 
-st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+    st.dataframe(df_tabela_formatada, use_container_width=True, hide_index=True)
+
+    # Exportar para Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        workbook = writer.book
+        worksheet = workbook.add_worksheet("Vendas")
+        writer.sheets['Vendas'] = worksheet
+
+        # Escreve título
+        worksheet.merge_range('A1:D1', 'Relatório de Faturamento - Nacional Indústria Mecânica',
+                              workbook.add_format({'bold': True, 'font_size': 14, 'align': 'center'}))
+        # Escreve os dados
+        df_tabela.to_excel(writer, sheet_name='Vendas', startrow=2, index=False)
+        formato_moeda = workbook.add_format({'num_format': 'R$ #.##0,00'})
+        worksheet.set_column('D:D', 18, formato_moeda)
+        worksheet.set_column('A:C', 18)
+
+    st.download_button(
+        label="📥 Exportar para Excel",
+        data=output.getvalue(),
+        file_name="faturamento_vendas.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # Rodapé
 st.markdown("""
