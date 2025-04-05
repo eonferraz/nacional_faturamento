@@ -1,5 +1,6 @@
 streamlit
 pandas
-pyodbc
-openpyxl
+sqlalchemy
+sqlalchemy-pytds
 plotly
+openpyxl
