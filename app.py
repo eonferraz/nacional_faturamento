@@ -7,7 +7,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="Faturamento Nacional", layout="wide")
 
-# Estilo da página - fundo grafite escuro
+# Estilo da página - fundo grafite escuro e faixa branca no topo
 st.markdown("""
     <style>
         body {
@@ -19,6 +19,15 @@ st.markdown("""
         }
         label, h1, h2, h3, h4, h5, h6, div[data-testid="stMarkdownContainer"] {
             color: #FFFFFF;
+        }
+        .faixa-branca {
+            background-color: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -34,13 +43,16 @@ df = get_data()
 df['mes_str'] = df['mes'].apply(lambda x: f"{x:02d}")
 df['data_faturamento'] = pd.to_datetime(df['data_faturamento'])
 
-# Header com logo, título e filtros
-col_logo, col_title = st.columns([0.15, 0.85])
-with col_logo:
-    st.image("nacional-escuro.svg", width=120)
-with col_title:
-    st.markdown("## Faturamento")
+# Faixa branca com logo e título centralizados
+with st.container():
+    st.markdown("""
+        <div class="faixa-branca">
+            <img src="nacional-escuro.svg" width="120">
+            <h1 style="color:#13253D; margin: 0;">FATURAMENTO</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
+# Filtros de data
 col_data1, col_data2 = st.columns(2)
 with col_data1:
     data_inicio = st.date_input("Data Inicial", value=pd.to_datetime(df['data_faturamento'].min()).date())
