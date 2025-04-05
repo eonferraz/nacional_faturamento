@@ -7,6 +7,10 @@ from datetime import datetime
 
 st.set_page_config(page_title="Faturamento Nacional", layout="wide")
 
+# Formatação de moeda brasileira
+def formatar_moeda(valor):
+    return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
+
 # Logo e header
 col1, col2 = st.columns([0.2, 0.8])
 with col1:
@@ -33,8 +37,9 @@ col1, col2 = st.columns(2)
 # Gráfico de Faturamento Mensal
 with col1:
     faturamento_mensal = df.groupby('mes_str')['receita'].sum().reset_index()
+    faturamento_mensal['receita_fmt'] = faturamento_mensal['receita'].apply(formatar_moeda)
     fig_mes = px.bar(faturamento_mensal, x='mes_str', y='receita',
-                    text_auto='.2s',
+                    text='receita_fmt',
                     labels={'mes_str': 'Mês', 'receita': 'Receita'},
                     template='simple_white')
     fig_mes.update_traces(marker_color='#13253D', textfont_size=14)
@@ -45,7 +50,8 @@ with col1:
 # Gráfico por Operação
 with col2:
     op = df.groupby('operacao')['receita'].sum().reset_index().sort_values(by='receita', ascending=False)
-    fig_op = px.bar(op, x='operacao', y='receita',
+    op['receita_fmt'] = op['receita'].apply(formatar_moeda)
+    fig_op = px.bar(op, x='operacao', y='receita', text='receita_fmt',
                     labels={'operacao': 'Operação', 'receita': 'Receita'},
                     template='simple_white')
     fig_op.update_traces(marker_color='#5A7497')
@@ -60,7 +66,8 @@ col3, col4 = st.columns(2)
 # Top 10 Clientes
 with col3:
     top_clientes = df.groupby('parceiro')['receita'].sum().nlargest(10).reset_index()
-    fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h',
+    top_clientes['receita_fmt'] = top_clientes['receita'].apply(formatar_moeda)
+    fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt',
                     labels={'parceiro': 'Cliente', 'receita': 'Receita'},
                     template='simple_white')
     fig_cli.update_traces(marker_color='#13253D')
@@ -78,12 +85,9 @@ df_tabela.rename(columns={
     'numero_nf': 'NF',
     'receita': 'Receita'
 }, inplace=True)
+df_tabela['Receita'] = df_tabela['Receita'].apply(formatar_moeda)
 
-st.dataframe(
-    df_tabela.style.background_gradient(subset=['Receita'], cmap='Reds'),
-    use_container_width=True,
-    hide_index=True
-)  
+st.dataframe(df_tabela, use_container_width=True, hide_index=True)
 
 # Rodapé
 st.markdown("""
