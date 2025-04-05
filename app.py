@@ -1,23 +1,37 @@
 import streamlit as st
 import pandas as pd
+from sqlalchemy.engine import URL
 from sqlalchemy import create_engine
-from urllib.parse import quote_plus
 from datetime import datetime
 import plotly.express as px
+from urllib.parse import quote_plus
 
 st.set_page_config(page_title="Dashboard de Faturamento", layout="wide")
 
-# 🔐 Conexão com SQL Server no Azure via SQLAlchemy + pytds
+# 🔐 Conexão com SQL Server via SQLAlchemy + ODBC (local)
 @st.cache_data(ttl=600)
 def carregar_dados():
-    usuario = "eduardo.ferraz"
-    senha = quote_plus("Pam6i8Z9N<;}P?C5;6v7")
-    servidor = "benu.database.windows.net"
-    banco = "benu"
+    # Dados de conexão
+    username = "eduardo.ferraz"
+    password = quote_plus("Pam6i8Z9N<;}P?C5;6v7")
+    host = "benu.database.windows.net"
+    database = "benu"
 
-    conn_str = f"mssql+pytds://{usuario}:{senha}@{servidor}:1433/{banco}"
-    engine = create_engine(conn_str)
+    connection_string = URL.create(
+        "mssql+pyodbc",
+        username=username,
+        password=password,
+        host=host,
+        port=1433,
+        database=database,
+        query={
+            "driver": "ODBC Driver 17 for SQL Server",
+            "Encrypt": "yes",
+            "TrustServerCertificate": "no"
+        }
+    )
 
+    engine = create_engine(connection_string)
     df = pd.read_sql("SELECT * FROM nacional_faturamento", con=engine)
 
     # Conversões de data
@@ -26,9 +40,8 @@ def carregar_dados():
 
     return df
 
-# 🎯 Início do app
+# 🌟 Início do App
 st.title("📊 Dashboard de Faturamento - Nacional")
-
 df = carregar_dados()
 
 # 📅 Filtros de ano e mês
@@ -41,7 +54,7 @@ mes_selecionado = col2.selectbox("Mês", meses, index=0)
 
 df_filtrado = df[(df["ano"] == ano_selecionado) & (df["mes"] == mes_selecionado)]
 
-# 📌 Indicadores
+# 🔹 Indicadores
 st.markdown(f"### 📅 Faturamento de {mes_selecionado:02d}/{ano_selecionado}")
 col3, col4, col5 = st.columns(3)
 col3.metric("Receita Total", f"R$ {df_filtrado['receita'].sum():,.2f}")
@@ -59,7 +72,7 @@ st.plotly_chart(fig_parceiros, use_container_width=True)
 st.subheader("📄 Detalhamento dos dados")
 st.dataframe(df_filtrado)
 
-# 📥 Exportar Excel
+# 📅 Exportar para Excel
 def gerar_excel(df):
     from io import BytesIO
     output = BytesIO()
@@ -68,7 +81,7 @@ def gerar_excel(df):
     return output.getvalue()
 
 st.download_button(
-    label="📥 Baixar Excel",
+    label="📅 Baixar Excel",
     data=gerar_excel(df_filtrado),
     file_name=f"faturamento_{ano_selecionado}_{mes_selecionado}.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
