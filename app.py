@@ -15,7 +15,44 @@ def carregar_dados():
         'PWD=8h!0+a~jL8]B6~^5s5+v'
     )
     conn = pyodbc.connect(conn_str)
-    query = "SELECT * FROM nacional_faturamento"
+    query = """
+        SELECT
+          numero_nf AS "Número NF",
+          data_negociacao AS "Data Negociação",
+          data_faturamento AS "Data Faturamento",
+          ano_mes AS "Ano-Mês",
+          ano AS "Ano",
+          mes AS "Mês",
+          data_entrada AS "Data Entrada",
+          cod_parceiro AS "Código Parceiro",
+          cod_projeto AS "Código Projeto",
+          abrev_projeto AS "Abrev. Projeto",
+          projeto AS "Projeto",
+          cnpj AS "CNPJ",
+          parceiro AS "Parceiro",
+          cod_top AS "Código TOP",
+          [top] AS "TOP",
+          movimento AS "Movimento",
+          cliente AS "Cliente",
+          fornecedor AS "Fornecedor",
+          codigo AS "Código Produto",
+          descricao AS "Descrição",
+          ncm AS "NCM",
+          grupo AS "Grupo",
+          cfop AS "CFOP",
+          operacao AS "Operação",
+          qtd_negociada AS "Qtd. Negociada",
+          qtd_entregue AS "Qtd. Entregue",
+          status AS "Status",
+          saldo AS "Saldo",
+          valor_unitario AS "Valor Unitário",
+          valor_total AS "Valor Total",
+          valor_icms AS "Valor ICMS",
+          valor_ipi AS "Valor IPI",
+          receita AS "Receita"
+        FROM
+          nacional_faturamento;
+    """
     df = pd.read_sql(query, conn)
     conn.close()
     return df
