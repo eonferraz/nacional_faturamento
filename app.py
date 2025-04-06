@@ -36,13 +36,14 @@ def carregar_dados():
     query = "SELECT * FROM nacional_faturamento"
     df = pd.read_sql(query, conn)
     conn.close()
+    df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
     return df
 
 # Layout superior
 with st.container():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        st.image("nacional-escuro.svg", use_container_width=True)
+        st.image("nacional-escuro.svg", use_container_width=False, width=100)
     with col2:
         st.markdown(f"<h1 style='text-align: center; color: {cores['azul_escuro']};'>FATURAMENTO</h1>", unsafe_allow_html=True)
     with col3:
