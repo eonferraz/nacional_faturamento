@@ -17,6 +17,17 @@ cores = {
     "vermelho_claro": "#DE3C4B"
 }
 
+st.markdown("""
+    <style>
+        body {
+            background-color: #1A1F22;
+        }
+        .main .block-container {
+            background-color: #1A1F22;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Função para formatar moeda
 @st.cache_data
 def formatar_moeda(valor):
@@ -45,12 +56,12 @@ with st.container():
     with col1:
         st.image("nacional-escuro.svg", use_container_width=False, width=100)
     with col2:
-        st.markdown(f"<h1 style='text-align: center; color: {cores['azul_escuro']};'>FATURAMENTO</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center; color: white;'>FATURAMENTO</h1>", unsafe_allow_html=True)
     with col3:
         df = carregar_dados()
         faturamento_total = df['receita'].sum()
         st.markdown(f"<div style='text-align: right; background-color: white; padding: 10px; border-radius: 10px;'>"
-                    f"<strong>Total:</strong><br><span style='font-size: 24px; color: {cores['azul_escuro']};'>"
+                    f"<span style='font-size: 24px; color: {cores['azul_escuro']};'>"
                     f"{formatar_moeda(faturamento_total)}</span></div>", unsafe_allow_html=True)
 
 # Filtro lateral
@@ -69,7 +80,7 @@ df_mes = df_mes.sort_values('mes')
 fig_coluna = px.bar(df_mes, x='mes', y='receita', color='operacao', barmode='stack',
                    labels={'mes': 'Mês', 'receita': 'Faturamento'},
                    text_auto='.2s', height=400)
-fig_coluna.update_layout(title_text='Faturamento Mensal', showlegend=True, legend_orientation='h',
+fig_coluna.update_layout(title=None, showlegend=True, legend_orientation='h',
                          plot_bgcolor='white', xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
 
 # Gráfico de rosca - % por operação
@@ -78,14 +89,14 @@ df_pie['pct'] = df_pie['receita'] / df_pie['receita'].sum()
 df_pie['label'] = df_pie.apply(lambda row: f"{row['operacao']}<br>{formatar_moeda(row['receita'])} ({row['pct']:.1%})", axis=1)
 fig_pie = px.pie(df_pie, values='receita', names='label', hole=0.5, height=400)
 fig_pie.update_traces(textinfo='none')
-fig_pie.update_layout(title_text='Distribuição por Operação', showlegend=False)
+fig_pie.update_layout(title=None, showlegend=False)
 
 # Layout da primeira faixa de gráficos
 with st.container():
     col1, col2 = st.columns([7, 3])
     with col1:
-        st.markdown(f"<h3 style='color:{cores['azul_claro']}'>Faturamento Mensal</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:{cores['azul_claro']}'>Faturamento Mensal</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_coluna, use_container_width=True)
     with col2:
-        st.markdown(f"<h3 style='color:{cores['azul_claro']}'>Distribuição por Operação</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:{cores['azul_claro']}'>Distribuição por Operação</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_pie, use_container_width=True)
