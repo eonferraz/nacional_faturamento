@@ -50,6 +50,10 @@ def carregar_dados():
     df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
     return df
 
+# Carregar dados
+df = carregar_dados()
+faturamento_total = df['receita'].sum()
+
 # Faixa superior branca com logo, título e total
 st.markdown("""
     <div style='background-color: white; padding: 20px;'>
@@ -58,11 +62,9 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col1:
     st.image("nacional-escuro.svg", use_container_width=False, width=100)
 with col2:
-    st.markdown(f"<h1 style='text-align: center; color: {cores['azul_escuro']};'>FATURAMENTO</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align: center; color: {cores['azul_escuro']}; margin-top: 10px;'>FATURAMENTO</h1>", unsafe_allow_html=True)
 with col3:
-    df = carregar_dados()
-    faturamento_total = df['receita'].sum()
-    st.markdown(f"<div style='text-align: right; background-color: white; padding: 10px; border-radius: 10px;'>"
+    st.markdown(f"<div style='text-align: right; padding: 10px; border-radius: 10px;'>"
                 f"<span style='font-size: 24px; color: {cores['azul_escuro']};'>"
                 f"{formatar_moeda(faturamento_total)}</span></div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
