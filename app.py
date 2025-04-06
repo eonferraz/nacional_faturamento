@@ -59,14 +59,13 @@ def carregar_dados():
     df['Data Faturamento'] = pd.to_datetime(df['Data Faturamento'], errors='coerce')
     return df
 
-# Header com logo e título
-col1, col2 = st.columns([1, 6])
-with col1:
-    st.image("nacional-escuro.svg", width=80)
-with col2:
-    st.markdown("""
-        <h1 style='margin-top: 20px;'>Dados de Faturamento</h1>
-    """, unsafe_allow_html=True)
+# Header com logo e título alinhados verticalmente ao centro
+st.markdown("""
+    <div style='display: flex; align-items: center; gap: 20px;'>
+        <img src='nacional-escuro.svg' width='80'>
+        <h1 style='margin: 0;'>Nacional Indústria Mecânica - Dados de Faturamento</h1>
+    </div>
+""", unsafe_allow_html=True)
 
 # Carrega dados
 original_df = carregar_dados()
@@ -105,9 +104,11 @@ with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         largura = max(df[col].astype(str).map(len).max(), len(col)) + 2
         worksheet.set_column(i, i, largura)
 
+nome_arquivo = f"faturamento_filtrado_{datetime.today().strftime('%Y%m%d')}.xlsx"
+
 st.download_button(
     label="📥 Baixar Excel",
     data=buffer.getvalue(),
-    file_name="faturamento_filtrado.xlsx",
+    file_name=nome_arquivo,
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
