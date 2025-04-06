@@ -76,23 +76,32 @@ df_filtrado = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) & (df['
 
 # Garantir 12 meses sempre no gráfico
 meses_ordem = list(range(1, 13))
-df_base = pd.DataFrame({"mes": meses_ordem})
 df_mes = df_filtrado.groupby(['mes', 'operacao'], as_index=False)['receita'].sum()
-df_mes = df_base.merge(df_mes, on="mes", how="left").fillna({"operacao": "Sem dados", "receita": 0})
-df_mes['mes'] = pd.Categorical(df_mes['mes'], categories=meses_ordem, ordered=True)
-df_mes = df_mes.sort_values('mes')
+df_mes['mes'] = df_mes['mes'].fillna(0).astype(int)
+operacoes_unicas = df_filtrado['operacao'].dropna().unique().tolist()
+df_final = pd.DataFrame()
 
-fig_coluna = px.bar(df_mes, x='mes', y='receita', color='operacao', barmode='stack',
+for op in operacoes_unicas:
+    df_temp = df_mes[df_mes['operacao'] == op].copy()
+    df_temp = pd.merge(pd.DataFrame({'mes': meses_ordem}), df_temp, on='mes', how='left')
+    df_temp['operacao'] = op
+    df_temp['receita'] = df_temp['receita'].fillna(0)
+    df_final = pd.concat([df_final, df_temp], ignore_index=True)
+
+fig_coluna = px.bar(df_final, x='mes', y='receita', color='operacao', barmode='stack',
                    labels={'mes': 'Mês', 'receita': 'Faturamento'},
                    text_auto='.2s', height=400)
 fig_coluna.update_layout(title=None, showlegend=True, legend_orientation='h',
                          plot_bgcolor='white', xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
 
 # Gráfico de rosca - % por operação
-if not df_filtrado.empty:
+if not df_filtrado.empty and df_filtrado['receita'].sum() > 0:
     df_pie = df_filtrado.groupby('operacao', as_index=False)['receita'].sum()
     df_pie['pct'] = df_pie['receita'] / df_pie['receita'].sum()
-    df_pie['label'] = df_pie.apply(lambda row: f"{row['operacao']}<br>{formatar_moeda(row['receita'])} ({row['pct']:.1%})", axis=1)
+    df_pie['label'] = df_pie.apply(
+        lambda row: f"{row['operacao']}<br>{formatar_moeda(row['receita'])} ({row['pct']:.1%})" if pd.notnull(row['operacao']) else "Sem operação",
+        axis=1
+    )
     fig_pie = px.pie(df_pie, values='receita', names='label', hole=0.5, height=400)
     fig_pie.update_traces(textinfo='none')
     fig_pie.update_layout(title=None, showlegend=False)
@@ -103,8 +112,8 @@ else:
 with st.container():
     col1, col2 = st.columns([7, 3])
     with col1:
-        st.markdown("<h2 style='color:white'>Faturamento Mensal</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white; white-space: nowrap;'>Faturamento Mensal</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_coluna, use_container_width=True)
     with col2:
-        st.markdown("<h2 style='color:white; font-size: 20px;'>Distribuição por operação</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white; font-size: 18px; white-space: nowrap;'>Distribuição por operação</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_pie, use_container_width=True)
