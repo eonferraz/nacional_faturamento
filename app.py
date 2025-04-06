@@ -3,6 +3,7 @@ import pandas as pd
 import pyodbc
 from io import BytesIO
 from datetime import datetime
+import base64
 
 st.set_page_config(page_title="Exportar Faturamento", layout="wide")
 
@@ -59,10 +60,15 @@ def carregar_dados():
     df['Data Faturamento'] = pd.to_datetime(df['Data Faturamento'], errors='coerce')
     return df
 
+# Codifica imagem da logo
+with open("nacional-escuro.svg", "rb") as image_file:
+    encoded = base64.b64encode(image_file.read()).decode()
+logo_img = f"data:image/svg+xml;base64,{encoded}"
+
 # Header com logo e título alinhados verticalmente ao centro
-st.markdown("""
+st.markdown(f"""
     <div style='display: flex; align-items: center; gap: 20px;'>
-        <img src='nacional-escuro.svg' width='80'>
+        <img src='{logo_img}' width='80'>
         <h1 style='margin: 0;'>Nacional Indústria Mecânica - Dados de Faturamento</h1>
     </div>
 """, unsafe_allow_html=True)
