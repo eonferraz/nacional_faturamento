@@ -56,6 +56,7 @@ def carregar_dados():
     """
     df = pd.read_sql(query, conn)
     conn.close()
+    df['Data Faturamento'] = pd.to_datetime(df['Data Faturamento'], errors='coerce')
     return df
 
 # Header com logo e título
@@ -64,7 +65,7 @@ with col1:
     st.image("nacional-escuro.svg", width=80)
 with col2:
     st.markdown("""
-        <h1 style='margin-top: 20px;'>Nacional Indústria Mecânica - Dados de Faturamento</h1>
+        <h1 style='margin-top: 20px;'>Dados de Faturamento</h1>
     """, unsafe_allow_html=True)
 
 # Carrega dados
@@ -84,6 +85,7 @@ filtro_operacao = st.sidebar.multiselect("Operação", operacoes)
 
 # Aplica filtros
 df = original_df.copy()
+df = df[df['Data Faturamento'].notna()]
 df = df[(df['Data Faturamento'] >= pd.to_datetime(data_inicio)) & (df['Data Faturamento'] <= pd.to_datetime(data_fim))]
 if filtro_parceiro:
     df = df[df['Parceiro'].isin(filtro_parceiro)]
