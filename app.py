@@ -69,7 +69,7 @@ logo_img = f"data:image/svg+xml;base64,{encoded}"
 st.markdown(f"""
     <div style='display: flex; align-items: center; gap: 20px;'>
         <img src='{logo_img}' width='80'>
-        <h1 style='margin: 0;'>Nacional Indústria Mecânica - Dados de Faturamento</h1>
+        <h1 style='margin: 0;'>Dados de Faturamento</h1>
     </div>
 """, unsafe_allow_html=True)
 
