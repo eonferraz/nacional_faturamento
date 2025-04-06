@@ -66,10 +66,10 @@ st.dataframe(df, use_container_width=True)
 buffer = BytesIO()
 with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
     df.to_excel(writer, sheet_name='Faturamento', index=False)
-    writer.save()
-    st.download_button(
-        label="📥 Baixar Excel",
-        data=buffer.getvalue(),
-        file_name="faturamento.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+
+st.download_button(
+    label="📥 Baixar Excel",
+    data=buffer.getvalue(),
+    file_name="faturamento.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
