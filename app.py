@@ -28,12 +28,10 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Função para formatar moeda
 @st.cache_data
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
 
-# Conexão com o banco SQL Azure
 @st.cache_resource
 def carregar_dados():
     conn_str = (
@@ -50,11 +48,10 @@ def carregar_dados():
     df['data_faturamento'] = pd.to_datetime(df['data_faturamento'], errors='coerce')
     return df
 
-# Carregar dados
 df = carregar_dados()
 faturamento_total = df['receita'].sum()
 
-# Faixa superior branca com logo, título e total
+# Faixa superior branca com conteúdo alinhado
 st.markdown("""
     <div style='background-color: white; padding: 20px;'>
 """, unsafe_allow_html=True)
@@ -69,19 +66,22 @@ with col3:
                 f"{formatar_moeda(faturamento_total)}</span></div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Filtro lateral
 with st.sidebar:
     st.markdown("## Filtros")
     data_inicio = st.date_input("Data de início", date(datetime.today().year, 1, 1))
     data_fim = st.date_input("Data de fim", date.today())
 
+# Filtro por data
 df_filtrado = df[(df['data_faturamento'] >= pd.to_datetime(data_inicio)) & (df['data_faturamento'] <= pd.to_datetime(data_fim))]
 
-# Gráfico de faturamento mensal
-df_mes = df_filtrado.groupby(['mes', 'operacao'], as_index=False)['receita'].sum()
+# Garantir 12 meses sempre no gráfico
 meses_ordem = list(range(1, 13))
+df_base = pd.DataFrame({"mes": meses_ordem})
+df_mes = df_filtrado.groupby(['mes', 'operacao'], as_index=False)['receita'].sum()
+df_mes = df_base.merge(df_mes, on="mes", how="left").fillna({"operacao": "Sem dados", "receita": 0})
 df_mes['mes'] = pd.Categorical(df_mes['mes'], categories=meses_ordem, ordered=True)
 df_mes = df_mes.sort_values('mes')
+
 fig_coluna = px.bar(df_mes, x='mes', y='receita', color='operacao', barmode='stack',
                    labels={'mes': 'Mês', 'receita': 'Faturamento'},
                    text_auto='.2s', height=400)
@@ -89,19 +89,22 @@ fig_coluna.update_layout(title=None, showlegend=True, legend_orientation='h',
                          plot_bgcolor='white', xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
 
 # Gráfico de rosca - % por operação
-df_pie = df_filtrado.groupby('operacao', as_index=False)['receita'].sum()
-df_pie['pct'] = df_pie['receita'] / df_pie['receita'].sum()
-df_pie['label'] = df_pie.apply(lambda row: f"{row['operacao']}<br>{formatar_moeda(row['receita'])} ({row['pct']:.1%})", axis=1)
-fig_pie = px.pie(df_pie, values='receita', names='label', hole=0.5, height=400)
-fig_pie.update_traces(textinfo='none')
-fig_pie.update_layout(title=None, showlegend=False)
+if not df_filtrado.empty:
+    df_pie = df_filtrado.groupby('operacao', as_index=False)['receita'].sum()
+    df_pie['pct'] = df_pie['receita'] / df_pie['receita'].sum()
+    df_pie['label'] = df_pie.apply(lambda row: f"{row['operacao']}<br>{formatar_moeda(row['receita'])} ({row['pct']:.1%})", axis=1)
+    fig_pie = px.pie(df_pie, values='receita', names='label', hole=0.5, height=400)
+    fig_pie.update_traces(textinfo='none')
+    fig_pie.update_layout(title=None, showlegend=False)
+else:
+    fig_pie = px.pie(values=[1], names=['Sem dados'], hole=0.5, height=400)
+    fig_pie.update_layout(title=None, showlegend=False)
 
-# Layout da primeira faixa de gráficos
 with st.container():
     col1, col2 = st.columns([7, 3])
     with col1:
-        st.markdown(f"<h2 style='color:white'>Faturamento Mensal</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white'>Faturamento Mensal</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_coluna, use_container_width=True)
     with col2:
-        st.markdown(f"<h2 style='color:white'>Distribuição por Operação</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white; font-size: 20px;'>Distribuição por operação</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_pie, use_container_width=True)
