@@ -7,20 +7,20 @@ from datetime import datetime
 import io
 import xlsxwriter
 
-st.set_page_config(page_title="Faturamento Nacional", layout="wide")
+st.set_page_config(page_title="Faturamento Nacional", layout="wide", initial_sidebar_state="collapsed")
 
 # Estilo da página - fundo grafite escuro e faixa branca no topo
 st.markdown("""
     <style>
         body {
             background-color: #1A1F22;
-            color: #13253D;
+            color: #FFFFFF;
         }
         .block-container {
             background-color: #1A1F22;
         }
         label, h1, h2, h3, h4, h5, h6, div[data-testid="stMarkdownContainer"] {
-            color: #13253D;
+            color: #FFFFFF !important;
         }
         .faixa-branca {
             background-color: white;
@@ -30,9 +30,6 @@ st.markdown("""
             display: flex;
             align-items: center;
             gap: 20px;
-        }
-        section[data-testid="stSidebar"] button {
-            color: #13253D !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -55,12 +52,12 @@ with st.container():
         </div>
     """, unsafe_allow_html=True)
 
-# Filtros de data
-col1, col2 = st.columns(2)
-with col1:
-    data_inicio = st.date_input("Data Inicial", value=df['data_faturamento'].min().date())
-with col2:
-    data_fim = st.date_input("Data Final", value=df['data_faturamento'].max().date())
+# Filtros na sidebar
+with st.sidebar:
+    st.markdown("## Filtros")
+    ano_atual = datetime.now().year
+    data_inicio = st.date_input("Data Inicial", value=pd.to_datetime(f"{ano_atual}-01-01").date())
+    data_fim = st.date_input("Data Final", value=datetime.today().date())
 
 # Aplicar filtro
 data_inicio = pd.to_datetime(data_inicio)
@@ -83,16 +80,15 @@ st.markdown("### Faturamento Mensal e por Operação")
 col1, col2 = st.columns([0.7, 0.3])
 
 with col1:
-    fig_mes = px.bar(faturamento_mensal, x='mes_str', y='receita', text='receita_fmt',
-                     labels={'mes_str': 'Mês', 'receita': 'Receita'}, title="Faturamento Mensal")
+    fig_mes = px.bar(faturamento_mensal, x='mes_str', y='receita', text='receita_fmt')
     fig_mes.update_traces(marker_color='#13253D', textfont_size=12)
     fig_mes.update_layout(showlegend=False, height=350, plot_bgcolor='white', paper_bgcolor='white')
     st.plotly_chart(fig_mes, use_container_width=True)
 
 with col2:
-    fig_op = px.pie(op, values='receita', names='label', hole=0.4, title="Porcentagem por Operação")
-    fig_op.update_traces(textinfo='none')
-    fig_op.update_layout(height=350, plot_bgcolor='white', paper_bgcolor='white')
+    fig_op = px.pie(op, values='receita', names='label', hole=0.4)
+    fig_op.update_traces(textinfo='label+percent')
+    fig_op.update_layout(height=350, plot_bgcolor='white', paper_bgcolor='white', legend=dict(orientation='h', y=1.1))
     st.plotly_chart(fig_op, use_container_width=True)
 
 # Segmento 2
@@ -100,22 +96,21 @@ st.markdown("### Faturamento por Cliente e Tabela de Vendas")
 col3, col4 = st.columns(2)
 
 with col3:
-    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().reset_index().sort_values(by='receita', ascending=False).head(10)
+    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().reset_index().sort_values(by='receita', ascending=True).tail(10)
+    top_clientes = top_clientes.sort_values(by='receita', ascending=False)
     top_clientes['receita_fmt'] = top_clientes['receita'].apply(formatar_moeda)
-    fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt',
-                     labels={'parceiro': 'Cliente', 'receita': 'Receita'}, title="Top 10 Clientes")
+    fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt')
     fig_cli.update_traces(marker_color='#13253D')
     fig_cli.update_layout(showlegend=False, height=400, plot_bgcolor='white', paper_bgcolor='white')
     st.plotly_chart(fig_cli, use_container_width=True)
 
 with col4:
-    st.markdown("**📋 Lista Detalhada de Vendas Faturadas**")
+    st.markdown("**📋 Lista Detalhada de Vendas Faturadas (com destaque por valor)**")
     df_tabela = df_filtrado[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
     df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
     df_tabela.rename(columns={'data_faturamento': 'Data', 'parceiro': 'Cliente', 'numero_nf': 'NF', 'receita': 'Receita'}, inplace=True)
-    df_tabela_formatada = df_tabela.copy()
-    df_tabela_formatada['Receita'] = df_tabela_formatada['Receita'].apply(formatar_moeda)
-    st.dataframe(df_tabela_formatada, use_container_width=True, hide_index=True)
+    df_tabela_heatmap = df_tabela.style.background_gradient(subset=['Receita'], cmap='Reds')
+    st.dataframe(df_tabela_heatmap, use_container_width=True, hide_index=True)
 
     # Exportar para Excel
     output = io.BytesIO()
