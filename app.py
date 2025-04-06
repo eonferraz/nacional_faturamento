@@ -95,8 +95,8 @@ fig_pie.update_layout(title=None, showlegend=False)
 with st.container():
     col1, col2 = st.columns([7, 3])
     with col1:
-        st.markdown(f"<h2 style='color:{cores['azul_claro']}'>Faturamento Mensal</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:white'>Faturamento Mensal</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_coluna, use_container_width=True)
     with col2:
-        st.markdown(f"<h2 style='color:{cores['azul_claro']}'>Distribuição por Operação</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='color:white'>Distribuição por Operação</h2>", unsafe_allow_html=True)
         st.plotly_chart(fig_pie, use_container_width=True)
