@@ -34,16 +34,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Formatação brasileira
+# Função de formatação monetária brasileira
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
 
-# Carregar dados
+# Carregamento de dados
 df = get_data()
 df['mes_str'] = df['mes'].apply(lambda x: f"{x:02d}")
 df['data_faturamento'] = pd.to_datetime(df['data_faturamento'])
 
-# Header
+# Faixa superior branca com logo e título
 with st.container():
     st.markdown("""
         <div class="faixa-branca">
@@ -52,7 +52,7 @@ with st.container():
         </div>
     """, unsafe_allow_html=True)
 
-# Sidebar de filtros
+# Filtros na sidebar
 with st.sidebar:
     st.markdown("## Filtros")
     ano_atual = datetime.now().year
