@@ -34,16 +34,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Função de formatação monetária brasileira
+# Formatação brasileira
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "v").replace(".", ",").replace("v", ".")
 
-# Carregamento de dados
+# Carregar dados
 df = get_data()
 df['mes_str'] = df['mes'].apply(lambda x: f"{x:02d}")
 df['data_faturamento'] = pd.to_datetime(df['data_faturamento'])
 
-# Faixa superior branca com logo e título
+# Header
 with st.container():
     st.markdown("""
         <div class="faixa-branca">
@@ -52,19 +52,18 @@ with st.container():
         </div>
     """, unsafe_allow_html=True)
 
-# Filtros na sidebar
+# Sidebar de filtros
 with st.sidebar:
     st.markdown("## Filtros")
     ano_atual = datetime.now().year
-    data_inicio = st.date_input("Data Inicial", value=pd.to_datetime(f"{ano_atual}-01-01").date())
+    data_inicio = st.date_input("Data Inicial", value=datetime(ano_atual, 1, 1).date())
     data_fim = st.date_input("Data Final", value=datetime.today().date())
 
-# Aplicar filtro
 data_inicio = pd.to_datetime(data_inicio)
 data_fim = pd.to_datetime(data_fim)
 df_filtrado = df[(df['data_faturamento'] >= data_inicio) & (df['data_faturamento'] <= data_fim)]
 
-# Faturamento mensal fixo com 12 meses
+# Faturamento mensal com 12 meses fixos
 todos_meses = pd.DataFrame({'mes_str': [f"{i:02d}" for i in range(1, 13)]})
 faturamento_mensal = df_filtrado.groupby('mes_str')['receita'].sum().reset_index()
 faturamento_mensal = todos_meses.merge(faturamento_mensal, on='mes_str', how='left').fillna(0)
@@ -75,7 +74,7 @@ op = df_filtrado.groupby('operacao')['receita'].sum().reset_index().sort_values(
 op['percentual'] = (op['receita'] / op['receita'].sum()) * 100
 op['label'] = op.apply(lambda x: f"{x['operacao']} ({formatar_moeda(x['receita'])} - {x['percentual']:.1f}%)", axis=1)
 
-# Segmento 1
+# Gráficos: Faturamento Mensal e por Operação
 st.markdown("### Faturamento Mensal e por Operação")
 col1, col2 = st.columns([0.7, 0.3])
 
@@ -91,13 +90,12 @@ with col2:
     fig_op.update_layout(height=350, plot_bgcolor='white', paper_bgcolor='white', legend=dict(orientation='h', y=1.1))
     st.plotly_chart(fig_op, use_container_width=True)
 
-# Segmento 2
+# Faturamento por Cliente e Tabela
 st.markdown("### Faturamento por Cliente e Tabela de Vendas")
 col3, col4 = st.columns(2)
 
 with col3:
-    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().reset_index().sort_values(by='receita', ascending=True).tail(10)
-    top_clientes = top_clientes.sort_values(by='receita', ascending=False)
+    top_clientes = df_filtrado.groupby('parceiro')['receita'].sum().reset_index().sort_values(by='receita', ascending=False).head(10)
     top_clientes['receita_fmt'] = top_clientes['receita'].apply(formatar_moeda)
     fig_cli = px.bar(top_clientes, x='receita', y='parceiro', orientation='h', text='receita_fmt')
     fig_cli.update_traces(marker_color='#13253D')
@@ -108,11 +106,16 @@ with col4:
     st.markdown("**📋 Lista Detalhada de Vendas Faturadas (com destaque por valor)**")
     df_tabela = df_filtrado[['data_faturamento', 'parceiro', 'numero_nf', 'receita']].copy()
     df_tabela = df_tabela.sort_values(by='data_faturamento', ascending=False)
-    df_tabela.rename(columns={'data_faturamento': 'Data', 'parceiro': 'Cliente', 'numero_nf': 'NF', 'receita': 'Receita'}, inplace=True)
-    df_tabela_heatmap = df_tabela.style.background_gradient(subset=['Receita'], cmap='Reds')
-    st.dataframe(df_tabela_heatmap, use_container_width=True, hide_index=True)
+    df_tabela.rename(columns={
+        'data_faturamento': 'Data',
+        'parceiro': 'Cliente',
+        'numero_nf': 'NF',
+        'receita': 'Receita'
+    }, inplace=True)
 
-    # Exportar para Excel
+    df_tabela_estilo = df_tabela.style.background_gradient(subset=['Receita'], cmap='Reds')
+    st.dataframe(df_tabela_estilo, use_container_width=True, hide_index=True)
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_tabela.to_excel(writer, sheet_name='Vendas', index=False)
@@ -129,8 +132,7 @@ with col4:
         data=output.getvalue(),
         file_name="faturamento_vendas.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="exportar_excel",
-        help="Clique para baixar o relatório em formato Excel"
+        key="exportar_excel"
     )
 
 # Rodapé
