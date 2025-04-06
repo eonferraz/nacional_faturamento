@@ -17,14 +17,14 @@ cores = {
     "vermelho_claro": "#DE3C4B"
 }
 
-st.markdown("""
+st.markdown(f"""
     <style>
-        body {
-            background-color: #1A1F22;
-        }
-        .main .block-container {
-            background-color: #1A1F22;
-        }
+        .stApp {{
+            background-color: {cores['grafite_escuro']};
+        }}
+        .block-container {{
+            background-color: {cores['grafite_escuro']};
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -56,7 +56,7 @@ with st.container():
     with col1:
         st.image("nacional-escuro.svg", use_container_width=False, width=100)
     with col2:
-        st.markdown(f"<h1 style='text-align: center; color: white;'>FATURAMENTO</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center; color: {cores['azul_escuro']};'>FATURAMENTO</h1>", unsafe_allow_html=True)
     with col3:
         df = carregar_dados()
         faturamento_total = df['receita'].sum()
